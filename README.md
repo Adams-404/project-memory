@@ -96,8 +96,10 @@ Run `npx skills --help` for the full list of supported agents.
 
 ### Option 2 — npm package
 
-The package is published under the scoped name, and ships the skills under
-the conventional `skills/` directory so `skillpm` / `npm-skills` / `skills-npm`
+The package is published to the public npm registry as
+**`@adams-404/project-memory@1.0.0`** (the unscoped name `project-memory` was
+already taken by an unrelated package). It ships the skills under the
+conventional `skills/` directory, so `skillpm` / `npm-skills` / `skills-npm`
 pick it up automatically:
 
 ```bash
@@ -113,6 +115,16 @@ npx @adams-404/project-memory bootstrap /path/to/your-project
 `skillpm install @adams-404/project-memory` and
 `npm-skills extract @adams-404/project-memory` both work too — they scan
 `node_modules` for `skills/*/SKILL.md`.
+
+Both verified against the published tarball: installing
+`@adams-404/project-memory` and running
+`npx project-memory bootstrap <dir>` creates all six memory files plus the
+three pointer files.
+
+> **Note on version 0.0.0-stage:** npm creates this harmless, code-free stub
+> the moment a new scoped package name is claimed, which reserves the name
+> while the real release is processed. Don't be alarmed by it in the version
+> list. Always install `@1.0.0` or later.
 
 ---
 
@@ -269,7 +281,19 @@ Proof that a cold agent can resume from the memory alone:
 bash tests/selftest.sh
 ```
 
-It builds a throwaway project with no memory, walks the full lifecycle — bootstrap, mid-task interruption with a buggy uncommitted change, resume from nothing but the memory files, verify against git, secrets scan, idempotency — and runs 41 assertions. Exits 0 on success.
+It builds a throwaway project with no memory, walks the full lifecycle — bootstrap, mid-task interruption with a buggy uncommitted change, resume from nothing but the memory files, verify against git, secrets scan, idempotency — and runs 54 assertions. Exits 0 on success.
+
+The suite also covers packaging: it `npm pack`s the tarball, `npm install`s it into a scratch project, and runs the installed bin in both CLI forms. That scenario is how the two real bugs in `bootstrap.sh` (templates not found through the npm bin symlink, and the `bootstrap` subcommand being swallowed) were found.
+
+---
+
+## Links
+
+- GitHub: https://github.com/Adams-404/project-memory
+- npm: https://www.npmjs.com/package/@adams-404/project-memory
+
+> The npm account has 2FA for publishing, so later releases need an OTP:
+> `npm publish --access public --otp=<code>`
 
 ---
 
