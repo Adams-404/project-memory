@@ -11,17 +11,65 @@
 #
 # Usage:
 #   scripts/bootstrap.sh [TARGET_DIR]
-#   scripts/bootstrap.sh /path/to/project
+#   scripts/bootstrap.sh bootstrap [TARGET_DIR]
+#   npx project-memory bootstrap [TARGET_DIR]
 #
 # Requires: bash 3.2+, cp, grep. Nothing else.
 
 set -euo pipefail
 
+# Accept an optional leading "bootstrap" subcommand so the CLI reads naturally:
+#   bootstrap.sh .
+#   bootstrap.sh bootstrap .
+#   npx project-memory bootstrap .
+if [ "${1:-}" = "bootstrap" ]; then
+  shift
+fi
+
 TARGET="${1:-.}"
+
+if [ ! -d "$TARGET" ]; then
+  echo "error: target directory does not exist: $TARGET" >&2
+  echo "usage: bootstrap.sh [bootstrap] [TARGET_DIR]" >&2
+  exit 1
+fi
+
 TARGET="$(cd "$TARGET" && pwd)"
 
-SKILL_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-TEMPLATES="$SKILL_ROOT/skills/project-memory/templates"
+# Resolve the real location of this script, following symlinks.
+# Needed because npm installs bins as symlinks in node_modules/.bin/, and
+# bash does not follow them for us in BASH_SOURCE.
+SELF="${BASH_SOURCE[0]}"
+while [ -L "$SELF" ]; do
+  SELF_DIR="$(cd "$(dirname "$SELF")" && pwd)"
+  LINK="$(readlink "$SELF")"
+  case "$LINK" in
+    /*) SELF="$LINK" ;;
+    *)  SELF="$SELF_DIR/$LINK" ;;
+  esac
+done
+SCRIPT_DIR="$(cd "$(dirname "$SELF")" && pwd)"
+
+# Pre-computed directory, overridable for exotic installs.
+if [ -n "${PROJECT_MEMORY_TEMPLATES:-}" ] && [ -d "${PROJECT_MEMORY_TEMPLATES}" ]; then
+  TEMPLATES="${PROJECT_MEMORY_TEMPLATES}"
+else
+  for CANDIDATE in \
+    "$SCRIPT_DIR/../skills/project-memory/templates" \
+    "$SCRIPT_DIR/../templates"
+  do
+    if [ -d "$CANDIDATE" ]; then
+      TEMPLATES="$(cd "$CANDIDATE" && pwd)"
+      break
+    fi
+  done
+fi
+
+if [ -z "${TEMPLATES:-}" ] || [ ! -d "$TEMPLATES" ]; then
+  echo "error: cannot locate the project-memory templates directory" >&2
+  echo "  set PROJECT_MEMORY_TEMPLATES=/path/to/skills/project-memory/templates" >&2
+  exit 1
+fi
 
 MEMORY_FILES=(STATE.md PROJECT.md DECISIONS.md LOG.md DEAD_ENDS.md TODO.md)
 POINTER_FILES=(AGENTS.md CLAUDE.md GEMINI.md)

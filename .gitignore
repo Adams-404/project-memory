@@ -7,3 +7,8 @@ Thumbs.db
 # Self-test scratch output
 /tmp/
 *.tmp
+
+# npm build artifacts
+*.tgz
+node_modules/
+npm-debug.log*

@@ -485,6 +485,75 @@ contains "pre-existing AGENTS.md content kept" 'Prefer tabs.' "$WORK/preexisting
 contains "pointer appended after existing content" 'read `.agent-memory/STATE.md`' "$WORK/preexisting/AGENTS.md"
 
 # ---------------------------------------------------------------------------
+section "7. npm-installed layout (the two bugs that only show up here)"
+# ---------------------------------------------------------------------------
+# bootstrap.sh resolves its templates relative to its own location, but npm
+# installs bins as symlinks into node_modules/.bin/ — so the naive
+# dirname "$BASH_SOURCE"/..  resolves to node_modules/ and finds no templates.
+# Also: the CLI is documented as `npx project-memory bootstrap <dir>`, so the
+# leading "bootstrap" subcommand must not be swallowed as the target dir.
+# Both were real bugs found by running the packaged tarball. Lock them in.
+
+if command -v npm >/dev/null 2>&1; then
+  # --ignore-scripts so this cannot recurse: package.json runs the self-test in
+  # `prepack`, and npm pack would re-enter it forever.
+  PACKDIR="$(mktemp -d)"
+  if (cd "$ROOT" && npm pack --pack-destination "$PACKDIR" --ignore-scripts > /dev/null 2>&1); then
+    # npm names the tarball from the package, not from --pack-destination, so
+    # locate whatever it produced.
+    TGZ="$(ls -1 "$PACKDIR"/*.tgz 2>/dev/null | head -n 1)"
+    if [ -n "$TGZ" ] && [ -f "$TGZ" ]; then
+      NPMTEST="$WORK/npmtest"
+      mkdir -p "$NPMTEST"
+      (cd "$NPMTEST" && npm init -y > /dev/null 2>&1 \
+        && npm install "$TGZ" > /dev/null 2>&1)
+
+      BIN="$NPMTEST/node_modules/.bin/project-memory"
+      if [ -x "$BIN" ]; then
+        mkdir -p "$NPMTEST/consumer"
+
+        # Form 1: `project-memory bootstrap <dir>` (documented CLI form)
+        "$BIN" bootstrap "$NPMTEST/consumer" > "$WORK/npm1.log" 2>&1
+        check "npm bin exit code (bootstrap subcommand)" "$?" "0"
+        for f in STATE.md PROJECT.md DECISIONS.md LOG.md DEAD_ENDS.md TODO.md; do
+          [ -f "$NPMTEST/consumer/.agent-memory/$f" ] \
+            && ok "npm install produced .agent-memory/$f" \
+            || bad "npm install produced no .agent-memory/$f (templates not found)"
+        done
+        contains "npm install wrote the AGENTS.md pointer" 'read `.agent-memory/STATE.md`' \
+          "$NPMTEST/consumer/AGENTS.md"
+
+        # Form 2: `project-memory <dir>` (no subcommand)
+        mkdir -p "$NPMTEST/consumer2"
+        "$BIN" "$NPMTEST/consumer2" > "$WORK/npm2.log" 2>&1
+        check "npm bin exit code (no subcommand)" "$?" "0"
+        [ -f "$NPMTEST/consumer2/.agent-memory/STATE.md" ] \
+          && ok "npm bin works without the bootstrap subcommand" \
+          || bad "npm bin failed without the bootstrap subcommand"
+
+        # Idempotency must hold for the installed bin too.
+        "$BIN" bootstrap "$NPMTEST/consumer" > /dev/null 2>&1
+        check "npm bin is idempotent" "$?" "0"
+        check "no duplicate pointers from re-running the npm bin" \
+          "$(grep -c 'read `.agent-memory/STATE.md`' "$NPMTEST/consumer/AGENTS.md")" "1"
+
+        # A bad target must fail loudly, not silently no-op.
+        "$BIN" bootstrap /nonexistent-dir-xyz > "$WORK/npm3.log" 2>&1
+        check "bad target dir exits non-zero" "$?" "1"
+      else
+        bad "npm bin was not created at $BIN"
+      fi
+    else
+      bad "npm pack produced no tarball in $PACKDIR"
+    fi
+  else
+    bad "npm pack failed"
+  fi
+else
+  echo "  SKIP  npm not available — npm-layout scenario skipped"
+fi
+
+# ---------------------------------------------------------------------------
 section "RESULT"
 # ---------------------------------------------------------------------------
 echo "  passed: $PASS"
