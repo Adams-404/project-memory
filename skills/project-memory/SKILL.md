@@ -46,7 +46,9 @@ before overriding it.
 
 1. Scan the repo: entry points, package/app manifest files, config, test setup,
    README, CI, `.env.example` (names only), `git log`.
-2. Copy every file from `templates/` into a new `.agent-memory/`.
+2. Copy every file from this skill's `templates/` directory into a new
+   `.agent-memory/`. (`scripts/bootstrap.sh` does this for you if it is
+   available: `bash scripts/bootstrap.sh .`)
 3. Fill `PROJECT.md` from what you actually found. Leave unknowns blank — do
    not guess. Mark unverified fields with `UNVERIFIED`.
 4. Write an initial `STATE.md`: current task = what the user just asked for,

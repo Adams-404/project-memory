@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
-# bootstrap.sh — create .agent-memory/ from the project-memory templates.
+# bootstrap.sh — create .agent-memory/ from the project-memory skill templates.
+#
+# The templates live at skills/project-memory/templates/, the canonical
+# location for the Agent Skills spec. This script is a convenience wrapper
+# so an agent can bootstrap without knowing the layout.
 #
 # Idempotent: safe to run repeatedly. Existing memory files are never
 # overwritten. Pointer blocks are appended to AGENTS.md / CLAUDE.md / GEMINI.md
@@ -17,7 +21,7 @@ TARGET="${1:-.}"
 TARGET="$(cd "$TARGET" && pwd)"
 
 SKILL_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-TEMPLATES="$SKILL_ROOT/templates"
+TEMPLATES="$SKILL_ROOT/skills/project-memory/templates"
 
 MEMORY_FILES=(STATE.md PROJECT.md DECISIONS.md LOG.md DEAD_ENDS.md TODO.md)
 POINTER_FILES=(AGENTS.md CLAUDE.md GEMINI.md)
