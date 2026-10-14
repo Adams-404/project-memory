@@ -40,80 +40,171 @@ Coding agents have two problems:
 
 ## Install
 
-### Any project (bootstrap from zero)
+### Option 1 — the skills CLI (recommended)
 
-Run this from inside the target project:
+Every npm-based agent skill installer discovers skills at
+`skills/<name>/SKILL.md`, which is exactly the layout this repo uses.
+
+**Install from GitHub, globally, for OpenCode:**
 
 ```bash
-bash /path/to/project-memory/scripts/bootstrap.sh .
+npx skills add Adams-404/project-memory -a opencode -g -y
 ```
 
-This is idempotent. It creates `.agent-memory/` from the templates, never overwriting anything already there, and appends pointer blocks to `AGENTS.md`, `CLAUDE.md`, and `GEMINI.md` — only if they're not already present.
+Land at `~/.agents/skills/project-memory/` — an OpenCode global discovery path.
+The `templates/` directory ships inside the skill, so the installed copy is
+self-contained and can bootstrap a project with no source repo present.
+
+**Install for several agents at once:**
+
+```bash
+npx skills add Adams-404/project-memory -a opencode -a claude-code -a codex -g -y
+```
+
+**Project-local instead of global** (drop `-g`, gets committed with your repo):
+
+```bash
+npx skills add Adams-404/project-memory -a opencode -y
+```
+
+**Alternative installer** — `agent-install` works the same way and accepts a
+local path, so you can also install straight from a clone:
+
+```bash
+npx agent-install@latest skill add Adams-404/project-memory --agent opencode --global -y
+# or from a local checkout:
+npx agent-install@latest skill add /path/to/project-memory --agent opencode --global -y
+```
+
+It symlinks or copies into each agent's skills directory (`copy` mode by
+default; `--copy` forces a copy).
+
+**Useful flags on both:**
+
+| Flag | Meaning |
+|---|---|
+| `-a, --agent <id>` | Target agent: `opencode`, `claude-code`, `codex`, `cursor`, `gemini-cli`, … |
+| `-g, --global` | Install to the user-level directory instead of the project |
+| `-s, --skill <name>` | Install specific skills from a multi-skill repo |
+| `-l, --list` | List what's available without installing |
+| `--copy` | Copy files instead of symlinking |
+| `-y, --yes` | Skip prompts (CI-friendly) |
+
+Run `npx skills --help` for the full list of supported agents.
 
 ---
 
-### OpenCode
+### Option 2 — npm package
 
-Two options — do both for best coverage.
-
-**As a skill (auto-triggered):**
-
-```bash
-# copy, clone, or symlink this folder into your global skills directory
-cp -r project-memory ~/.config/opencode/skills/
-```
-
-Or keep it in one place and symlink:
+The package is published under the scoped name, and ships the skills under
+the conventional `skills/` directory so `skillpm` / `npm-skills` / `skills-npm`
+pick it up automatically:
 
 ```bash
-ln -s ~/Projects/project-memory ~/.config/opencode/skills/project-memory
+npm install -g @adams-404/project-memory
 ```
 
-The skill now triggers automatically at the start of any project work.
+Or one-shot without installing:
 
-**As an always-on instruction (belt and braces):**
+```bash
+npx @adams-404/project-memory bootstrap /path/to/your-project
+```
 
-Add the pointer block to `~/.config/opencode/AGENTS.md`, or keep the per-project `AGENTS.md` the bootstrap script creates.
+`skillpm install @adams-404/project-memory` and
+`npm-skills extract @adams-404/project-memory` both work too — they scan
+`node_modules` for `skills/*/SKILL.md`.
+
+---
+
+### Option 3 — manual (no npm, no network)
+
+```bash
+# global, OpenCode
+cp -r skills/project-memory ~/.config/opencode/skills/
+
+# or symlink so edits to this repo apply everywhere
+ln -s ~/Projects/project-memory/skills/project-memory ~/.config/opencode/skills/project-memory
+
+# Claude Code
+cp -r skills/project-memory ~/.claude/skills/
+
+# universal (.agents/skills is read by most agents)
+cp -r skills/project-memory ~/.agents/skills/
+```
+
+---
+
+### Bootstrap a project (all agents)
+
+Once the skill is installed, an agent can self-bootstrap. Or you can do it by
+hand from inside the target project:
+
+```bash
+bash /path/to/project-memory/scripts/bootstrap.sh .
+# or, if the npm package is installed:
+npx @adams-404/project-memory bootstrap .
+```
+
+This is idempotent. It creates `.agent-memory/` from the templates, never
+overwriting anything already there, and appends pointer blocks to
+`AGENTS.md`, `CLAUDE.md`, and `GEMINI.md` — only if they're not already
+present.
+
+### Pointer files (the part that makes it work without skills)
+
+Not every agent can load a skill. Every agent reads *some* instruction file,
+so `bootstrap.sh` writes the pointer block into all three:
+
+```markdown
+## Project Memory
+
+Before doing anything, read `.agent-memory/STATE.md` and follow the
+project-memory workflow. Keep it updated as you work.
+```
+
+Nothing is ever overwritten — pointers are only appended when missing.
 
 ---
 
 ### Claude Code
 
-Claude Code doesn't load external skills, so use the pointer file:
+Claude Code reads `CLAUDE.md`. The bootstrap script writes the pointer there,
+so Claude finds the memory at session start. Optionally also install the skill
+itself:
 
 ```bash
-bash /path/to/project-memory/scripts/bootstrap.sh /path/to/your-project
+npx skills add Adams-404/project-memory -a claude-code -g -y
 ```
 
-This creates `.agent-memory/` and writes the pointer into `CLAUDE.md`. Claude reads `CLAUDE.md` at the start of every session, so it will find the memory automatically.
-
-Global fallback — append the block below to `~/.claude/CLAUDE.md`.
+Global fallback — append the pointer block to `~/.claude/CLAUDE.md`.
 
 ---
 
 ### Codex
 
-```bash
-bash /path/to/project-memory/scripts/bootstrap.sh /path/to/your-project
-```
+Codex reads `AGENTS.md`, which the bootstrap script updates.
 
-Codex reads `AGENTS.md`, which now contains the pointer.
+```bash
+npx skills add Adams-404/project-memory -a codex -g -y
+```
 
 ---
 
 ### Agy / Gemini-based tools
 
-```bash
-bash /path/to/project-memory/scripts/bootstrap.sh /path/to/your-project
-```
+These read `GEMINI.md`, which the bootstrap script updates.
 
-These read `GEMINI.md`, which now contains the pointer.
+```bash
+npx skills add Adams-404/project-memory -a gemini-cli -g -y
+```
 
 ---
 
 ### Any other agent
 
-Same command. Pointers are written to all three files, and the bootstrap always produces `.agent-memory/`. If your agent reads none of them, tell it once:
+Same bootstrap command. Pointers go to all three instruction files, and
+`.agent-memory/` is always created. If your agent reads none of them, tell it
+once:
 
 > Read `.agent-memory/STATE.md` and follow the project-memory workflow. Keep it updated as you work.
 
@@ -186,22 +277,29 @@ It builds a throwaway project with no memory, walks the full lifecycle — boots
 
 ```
 project-memory/
-├── SKILL.md                      # The skill: agent-facing, imperative
 ├── README.md
-├── LICENSE                       # MIT
+├── LICENSE                             # MIT
+├── package.json                       # npm distribution (skills/ convention)
+├── skills/
+│   └── project-memory/                # the skill — self-contained
+│       ├── SKILL.md                    # Agent Skills frontmatter + workflow
+│       └── templates/                  # memory file starters
+│           ├── STATE.md
+│           ├── PROJECT.md
+│           ├── DECISIONS.md
+│           ├── LOG.md
+│           ├── DEAD_ENDS.md
+│           ├── TODO.md
+│           └── AGENTS.md  CLAUDE.md  GEMINI.md   # pointer blocks
 ├── scripts/
-│   └── bootstrap.sh              # Idempotent setup + pointer injection
-├── templates/
-│   ├── STATE.md
-│   ├── PROJECT.md
-│   ├── DECISIONS.md
-│   ├── LOG.md
-│   ├── DEAD_ENDS.md
-│   ├── TODO.md
-│   └── AGENTS.md  CLAUDE.md  GEMINI.md   # pointer blocks
+│   └── bootstrap.sh                   # Idempotent setup + pointer injection
 └── tests/
     └── selftest.sh
 ```
+
+`skills/project-memory/` is the canonical skill directory and what gets
+installed by `npx skills` / `agent-install` / `skillpm`. It carries its own
+`templates/`, so an installed copy can bootstrap a project on its own.
 
 ---
 

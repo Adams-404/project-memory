@@ -1,0 +1,55 @@
+{
+  "name": "@adams-404/project-memory",
+  "version": "1.0.0",
+  "description": "Agent skill: persistent, portable, plain-markdown project memory in .agent-memory/ so any coding agent can resume where the last one stopped.",
+  "keywords": [
+    "agent-skills",
+    "skill",
+    "ai-agent",
+    "claude-code",
+    "opencode",
+    "codex",
+    "cursor",
+    "agents-md",
+    "project-memory",
+    "handoff",
+    "context"
+  ],
+  "license": "MIT",
+  "author": "Adams-404",
+  "homepage": "https://github.com/Adams-404/project-memory",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Adams-404/project-memory.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Adams-404/project-memory/issues"
+  },
+  "type": "module",
+  "bin": {
+    "project-memory": "scripts/bootstrap.sh"
+  },
+  "scripts": {
+    "bootstrap": "bash scripts/bootstrap.sh .",
+    "test": "bash tests/selftest.sh",
+    "prepack": "bash tests/selftest.sh"
+  },
+  "files": [
+    "skills/",
+    "scripts/",
+    "tests/",
+    "README.md",
+    "LICENSE"
+  ],
+  "npmSkills": {
+    "publish": {
+      "source": "skills"
+    }
+  },
+  "skills": [
+    "Adams-404/project-memory"
+  ],
+  "engines": {
+    "node": ">=18"
+  }
+}
