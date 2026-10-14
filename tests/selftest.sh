@@ -495,10 +495,20 @@ section "7. npm-installed layout (the two bugs that only show up here)"
 # Both were real bugs found by running the packaged tarball. Lock them in.
 
 if command -v npm >/dev/null 2>&1; then
-  # --ignore-scripts so this cannot recurse: package.json runs the self-test in
-  # `prepack`, and npm pack would re-enter it forever.
+  # npm exports npm_config_* to lifecycle scripts, so a nested `npm pack` inherits
+  # the parent's flags. In particular `npm pack --dry-run` sets npm_config_dry_run,
+  # which makes the inner pack emit no tarball at all. --ignore-scripts keeps the
+  # inner pack from re-entering `prepack`, which runs this self-test.
+  pack_clean() {
+    local v
+    for v in $(env | grep '^npm_config_' | cut -d= -f1); do
+      unset "$v"
+    done
+    ( cd "$ROOT" && npm pack --pack-destination "$1" --ignore-scripts > /dev/null 2>&1 )
+  }
+
   PACKDIR="$(mktemp -d)"
-  if (cd "$ROOT" && npm pack --pack-destination "$PACKDIR" --ignore-scripts > /dev/null 2>&1); then
+  if pack_clean "$PACKDIR"; then
     # npm names the tarball from the package, not from --pack-destination, so
     # locate whatever it produced.
     TGZ="$(ls -1 "$PACKDIR"/*.tgz 2>/dev/null | head -n 1)"
